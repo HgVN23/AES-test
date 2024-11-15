@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>AES</title>
+	<style type="text/css">
+		* {
+			color: white;
+		}
+		body {
+			background: #202124;
+		}
+		textarea {
+			background: #3c4043;
+			min-width: 30rem;
+			max-width: 30rem;
+			min-height: 5rem;
+			font-size: 16px;
+		}
+		.d-flex {
+			display: flex;
+		}
+		.flex-column {
+			flex-direction: column;
+		}
+		.gap-1 {
+			gap: 1rem;
+		}
+		h3, p {
+			margin: 0 0 5px 0;
+		}
+		button {
+			background: #3c4043;
+			cursor: pointer;
+			padding: .5rem 1rem;
+			margin: 0 auto;
+		}
+		.justify-content-between {
+			justify-content: space-between;
+		}
+		.justify-content-center {
+			justify-content: center;
+		}
+		#output {
+			background: #3c4043;
+			width: 100vh;
+			height: 85vh;
+			padding: .5rem 1rem;
+			overflow-y: auto;
+		}
+		table, td {
+			border: 1px solid white;
+			border-collapse: collapse;
+			text-align: center;
+		}
+		td {
+			width: 1.3rem;
+			height: 1.3rem;
+		}
+	</style>
+</head>
+<body class="d-flex justify-content-center gap-1">
+	<div class="d-flex flex-column gap-1">
+		<div>
+			<h3>Bản rõ</h3>
+			<p>Lưu ý: Nếu không đủ 16 ký tự, tự động chèn thêm *</p>
+			<textarea id="inputDecrypt">Two One Nine Two</textarea>
+		</div>
+		<div>
+			<h3>Khóa</h3>
+			<textarea id="inputKey">Thats my Kung Fu</textarea>
+		</div>
+		<div>
+			<h3>Bản mã</h3>
+			<textarea id="inputEncrypt"></textarea>
+		</div>
+		<div class="d-flex flex-column gap-1">
+			<div class="d-flex ">
+				<button onclick="encryptRun()">Mã hóa</button>
+				<button onclick="decrypt()">Giải mã</button>
+			</div>
+			<div class="d-flex ">
+				<button onclick="clean()">Xóa</button>
+			</div>
+		</div>
+	</div>
+	<div>
+		<h3>Output</h3>
+		<div id="output"></div>
+	</div>
+	<script type="text/javascript">
+		const SBox = [
+			["63", "7C", "77", "7B", "F2", "6B", "6F", "C5", "30", "01", "67", "2B", "FE", "D7", "AB", "76"],
+			["CA", "82", "C9", "7D", "FA", "59", "47", "F0", "AD", "D4", "A2", "AF", "9C", "A4", "72", "C0"],
+			["B7", "FD", "93", "26", "36", "3F", "F7", "CC", "34", "A5", "E5", "F1", "71", "D8", "31", "15"],
+			["04", "C7", "23", "C3", "18", "96", "05", "9A", "07", "12", "80", "E2", "EB", "27", "B2", "75"],
+			["09", "83", "2C", "1A", "1B", "6E", "5A", "A0", "52", "3B", "D6", "B3", "29", "E3", "2F", "84"],
+			["53", "D1", "00", "ED", "20", "FC", "B1", "5B", "6A", "CB", "BE", "39", "4A", "4C", "58", "CF"],
+			["D0", "EF", "AA", "FB", "43", "4D", "33", "85", "45", "F9", "02", "7F", "50", "3C", "9F", "A8"],
+			["51", "A3", "40", "8F", "92", "9D", "38", "F5", "BC", "B6", "DA", "21", "10", "FF", "F3", "D2"],
+			["CD", "0C", "13", "EC", "5F", "97", "44", "17", "C4", "A7", "7E", "3D", "64", "5D", "19", "73"],
+			["60", "81", "4F", "DC", "22", "2A", "90", "88", "46", "EE", "B8", "14", "DE", "5E", "0B", "DB"],
+			["E0", "32", "3A", "0A", "49", "06", "24", "5C", "C2", "D3", "AC", "62", "91", "95", "E4", "79"],
+			["E7", "C8", "37", "6D", "8D", "D5", "4E", "A9", "6C", "56", "F4", "EA", "65", "7A", "AE", "08"],
+			["BA", "78", "25", "2E", "1C", "A6", "B4", "C6", "E8", "DD", "74", "1F", "4B", "BD", "8B", "8A"],
+			["70", "3E", "B5", "66", "48", "03", "F6", "0E", "61", "35", "57", "B9", "86", "C1", "1D", "9E"],
+			["E1", "F8", "98", "11", "69", "D9", "8E", "94", "9B", "1E", "87", "E9", "CE", "55", "28", "DF"],
+			["8C", "A1", "89", "0D", "BF", "E6", "42", "68", "41", "99", "2D", "0F", "B0", "54", "BB", "16"]
+		];
+		const MixMatrix = [
+			[2, 3, 1, 1],
+			[1, 2, 3, 1],
+			[1, 1, 2, 3],
+			[3, 1, 1, 2]
+		]
+		const Rcon = [ "01", "02", "04", "08", "10", "20", "40", "80", "1B", "36" ]
+	</script>
+	<script type="text/javascript">
+		/*let plainText = [
+		  	["32", "88", "31", "E0"],
+			["43", "5A", "31", "37"],
+			["F6", "30", "98", "07"],
+			["A8", "8D", "A2", "34"]
+		];
+		let keyText = [
+			["2B", "28", "AB", "09"],
+			["7E", "AE", "F7", "CF"],
+			["15", "D2", "15", "4F"],
+			["16", "A6", "88", "3C"]
+		];*/
+
+		/*let previousKey = keyText;
+		let currentKey = [ [], [], [], [] ];
+
+		let addRK = AddRoundKey(plainText, keyText);
+		let subB = SubBytes(addRK);
+		let shiftR = ShiftRows(subB);
+		let mixC = MixColumns(shiftR);
+		let keyE = KeyExpansion(previousKey);
+		console.log(mixC)
+		console.log(keyE)*/
+
+		function textToHex(text) {
+			let arr = text.split('');
+			let hex = [];
+
+			for (let i = 0; i < text.length; i++) {
+				hex.push(arr[i].charCodeAt(0).toString(16).toUpperCase());
+			}
+			return hex;
+		}
+		function hexToBinary(hex) {
+			return hex.split('').map(char => parseInt(char, 16).toString(2).padStart(4, '0')).join('');
+		}
+		function binaryToHex(binary) {
+			return binary.match(/.{1,4}/g).map(bin => parseInt(bin, 2).toString(16).toUpperCase()).join('');
+		}
+		function hexToDecimal(hex) {
+			return parseInt(hexToBinary(hex), 2);
+		}
+
+		function xorHex(hex1, hex2) {
+			const binary1 = hexToBinary(hex1);
+			const binary2 = hexToBinary(hex2);
+
+			let resultBinary = '';
+			for (let i = 0; i < binary1.length; i++) {
+				resultBinary += (binary1[i] !== binary2[i]) ? '1' : '0';
+			}
+
+			return binaryToHex(resultBinary);
+		}
+
+		function AddRoundKey(hex1, hex2) {
+			let temp = [];
+			for (var i = 0; i < hex1.length; i++) {
+				temp[i] = [];
+				for (var j = 0; j < hex1[i].length; j++) {
+					temp[i][j] = xorHex(hex1[i][j], hex2[i][j]);
+				}
+			}
+			return temp;
+		}
+
+		function SubBytes(hex) {
+			let temp = [];
+			for (var i = 0; i < hex.length; i++) {
+				temp[i] = [];
+				for (var j = 0; j < hex[i].length; j++) {
+					let row = hexToDecimal(hex[i][j].slice(0, 1));
+					let col = hexToDecimal(hex[i][j].slice(1));
+					temp[i][j] = SBox[row][col];
+				}
+			}
+			return temp;
+		}
+
+		function ShiftRows(hex) {
+			let temp = [];
+			let lvl = 0;
+			for (var i = 0; i < hex.length; i++) {
+				temp[i] = [];
+				for (var j = 0 + lvl; j < hex[i].length; j++) {
+					temp[i][j - lvl] = hex[i][j];
+				}
+				for (var j = 0; j < lvl; j++) {
+					temp[i][j + hex[i].length - lvl] = hex[i][j];
+				}
+				lvl++;
+			}
+			return temp;
+		}
+
+		function MixColumns(hex) {
+			let temp = [[], [], [], []];
+			for (var col = 0; col < 4; col++) {
+				for (var i = 0; i < 4; i++) {
+					let xorSum = "00";
+					for (var j = 0; j < 4; j++) {
+						let result = "";
+						switch (MixMatrix[i][j]) {
+							case 1:
+								result = hex[j][col];
+								break;
+							case 2:
+								result = Shift02(hex[j][col]);
+								break;
+							case 3:
+								result = xorHex(hex[j][col], Shift02(hex[j][col]));
+								break;
+						}
+						xorSum = xorHex(xorSum, result);
+					}
+					temp[i][col] = xorSum;
+				}
+			}
+			return temp;
+		}
+		function Shift02(hex) {
+			let binary = hexToBinary(hex).toString();
+			let first = binary.slice(0, 1).toString();
+			let newBinary = binary.slice(1).toString() + "0";
+			if(first == 0) {
+				return binaryToHex(newBinary);
+			} else {
+				return xorHex(binaryToHex(newBinary), "1B");
+			}
+		}
+
+		function KeyExpansion(key, round) {
+			let temp = [ [], [], [], [] ];
+			for (var i = 0; i < 4; i++) {
+				let w1 = getW(key, i);
+				let w2;
+
+				if(i == 0) {
+					w2 = trans(getW(key, 3), round);
+				} else {
+					w2 = getW(temp, i - 1);
+				}
+
+				for (var j = 0; j < 4; j++) {
+					temp[j].push(xorHex(w1[j], w2[j]));
+				}
+			}
+			return temp;
+		}
+		function getW(hex, col) {
+			let temp = [hex[0][col], hex[1][col], hex[2][col], hex[3][col]];
+			return temp;
+		}
+		function trans(arr, round) {
+			return AddRcon(SubWord(RotWord(arr)), round);
+		}
+		function RotWord(arr) {
+			let temp = [arr[1], arr[2], arr[3], arr[0]];
+			return temp;
+		}
+		function SubWord(arr) {
+			let temp = [];
+			for (var i = 0; i < arr.length; i++) {
+				let row = hexToDecimal(arr[i].slice(0, 1));
+				let col = hexToDecimal(arr[i].slice(1));
+				temp.push(SBox[row][col]);
+			}
+			return temp;
+		}
+		function AddRcon(arr, round) {
+			let temp = [];
+			temp.push(xorHex(arr[0], Rcon[round]));
+			temp.push(xorHex(arr[1], "00"));
+			temp.push(xorHex(arr[2], "00"));
+			temp.push(xorHex(arr[3], "00"));
+
+			return temp;
+		}
+	</script>
+	<script type="text/javascript">
+		const inputDecrypt = document.querySelector('#inputDecrypt');
+		const inputKey = document.querySelector('#inputKey');
+		const inputEncrypt = document.querySelector('#inputEncrypt');
+		const output = document.querySelector('#output');
+		let plainText = [];
+
+		function encryptRun() {
+			const input = inputDecrypt.value;
+			const keyValue = inputKey.value;
+			let matrix = [], key = [], tempKey = "";
+			plainText = [];
+
+			output.innerHTML = null;
+			output.innerHTML += "<h3>Mã hóa</h3>";
+			output.innerHTML += `<p>Bản rõ: <b>${input}</b></p>`;
+			output.innerHTML += `<p>Kích thước bản rõ: ${input.length}</p>`;
+
+			cutPlainText(input);
+			if(input.length > 16) {
+				output.innerHTML += `<br><p>Kích thước bản rõ lớn hơn 16, cắt làm ${Math.ceil(input.length / 16)} đoạn để mã hóa</p>`;
+				plainText.forEach((e, i) => {
+					output.innerHTML += `<p>Đoạn ${i + 1}: <b>${e}</b></p>`;
+				});
+			} else if(input.length < 16) {
+				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn 16, chèn thêm *</p>`;
+				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${plainText[0]}</b></p>`;
+			}
+
+			output.innerHTML += `<br><p>Khóa: <b>${keyValue}</b></p>`;
+			output.innerHTML += `<p>Kích thước khóa: ${keyValue.length}</p>`;
+
+			tempKey = checkKey(keyValue);
+			if(keyValue.length > 16) {
+				output.innerHTML += `<br><p>Kích thước khóa lớn hơn 16, cắt lấy 16 ký tự để mã hóa</p>`;
+				output.innerHTML += `<p>Sau khi cắt: <b>${tempKey}</b></p>`;
+			} else if(keyValue.length < 16) {
+				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn 16, chèn thêm *</p>`;
+				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${tempKey}</b></p>`;
+			}
+			output.innerHTML += `<p>Chuyển khóa thành ma trận sau:</p>`;
+			key = createMatrix(tempKey);
+			output.innerHTML += genTable(key);
+
+			output.innerHTML += `<p>Chuyển ma trận qua mã Hex:</p>`;
+			key = createMatrix(textToHex(tempKey));
+			output.innerHTML += genTable(key);
+
+			plainText.forEach(e => {
+				output.innerHTML += `<hr><h3>Mã hóa đoạn: ${e}</h3>`;
+
+				output.innerHTML += `<p>Chuyển <b>${e}</b> thành ma trận sau:</p>`;
+				matrix = createMatrix(e);
+				output.innerHTML += genTable(matrix);
+
+				output.innerHTML += `<p>Chuyển ma trận qua mã Hex:</p>`;
+				matrix = createMatrix(textToHex(e));
+				output.innerHTML += genTable(matrix);
+
+				let addRK, subB, shiftR, mixC;
+				for (var i = 0; i <= 10; i++) {
+					output.innerHTML += `<br><p>> Vòng lặp ${i}</p>`;
+
+					output.innerHTML += `<p>- RoundKey ${i}</p>`;
+					if(i != 0) {
+						key = KeyExpansion(key, i - 1);
+					}
+					output.innerHTML += genTable(key);
+
+					output.innerHTML += `<p>- AddRoundKey ${i}</p>`;
+					if(i == 0) {
+						addRK = AddRoundKey(matrix, key);
+					} else {
+						addRK = AddRoundKey(mixC, key);
+					}
+					output.innerHTML += genTable(addRK);
+						
+					if(i < 10) {
+						output.innerHTML += `<p>- SubBytes ${i}</p>`;
+						subB = SubBytes(addRK);
+						output.innerHTML += genTable(subB);
+						
+						output.innerHTML += `<p>- ShiftRows ${i}</p>`;
+						shiftR = ShiftRows(subB);
+						output.innerHTML += genTable(shiftR);
+					}
+					
+					if(i < 9) {
+						output.innerHTML += `<p>- MixColumns ${i}</p>`;
+						mixC = MixColumns(shiftR);
+						output.innerHTML += genTable(mixC);
+					} else {
+						mixC = shiftR;
+					}
+				}
+			});
+		}
+
+		function decrypt() {
+
+		}
+
+		function clean() {
+			inputEncrypt.value = null;
+			inputKey.value = null;
+			inputDecrypt.value = null;
+			output.innerHTML = null;
+		}
+
+		function cutPlainText(str) {
+			for (var i = 0; i < str.length; i += 16) {
+				let group = str.substring(i, i + 16);
+				plainText.push(group.padEnd(16, '*'));
+			}
+		}
+
+		function checkKey(key) {
+			if(key.length > 16) {
+				return key.substring(0, 16);
+			}
+			else if(key.length < 16) {
+				return key.padEnd(16, '*');
+			} else {
+				return key;
+			}
+		}
+
+		function createMatrix(str) {
+			let temp = [ [], [], [], [] ];
+			let char = 0;
+
+			for (var i = 0; i < 4; i++) {
+				for (var j = 0; j < 4; j++) {
+					temp[j][i] = str[char];
+					char++;
+				}
+			}
+			return temp;
+		}
+
+		function genTable(matrix) {
+			let temp = `<table>`;
+			for (var i = 0; i < 4; i++) {
+				temp += '<tr>';
+				for (var j = 0; j < 4; j++) {
+					temp += `<td>${matrix[i][j]}</td>`
+				}
+				temp += '</tr>';
+			}
+			return `${temp}</table>`;
+		}
+	</script>
+</body>
+</html>
