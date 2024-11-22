@@ -34,13 +34,15 @@
 			background: #3c4043;
 			cursor: pointer;
 			padding: .5rem 1rem;
-			margin: 0 auto;
 		}
 		.justify-content-between {
 			justify-content: space-between;
 		}
 		.justify-content-center {
 			justify-content: center;
+		}
+		.justify-content-end {
+			justify-content: right;
 		}
 		#output {
 			background: #3c4043;
@@ -64,24 +66,51 @@
 	<div class="d-flex flex-column gap-1">
 		<div>
 			<h3>Bản rõ</h3>
-			<p>Lưu ý: Nếu không đủ 16 ký tự, tự động chèn thêm *</p>
+			<!-- <p>Lưu ý: Nếu không đủ 16 ký tự, tự động chèn thêm *</p> -->
 			<textarea id="inputDecrypt">Two One Nine Two</textarea>
+			<br>
+			<div class="d-flex justify-content-between">
+				<button onclick="encryptRun()">Mã hóa</button>
+				<button onclick="cleanD()">Xóa</button>
+			</div>
 		</div>
 		<div>
 			<h3>Khóa</h3>
 			<textarea id="inputKey">Thats my Kung Fu</textarea>
+			<br>
+			<div class="d-flex gap-1">
+				<div>
+					<input type="radio" id="b128" name="keyType" value="128" onclick="configKey(this)" checked>
+					<label for="b128">128bit</label>
+				</div>
+				<div>
+					<input type="radio" id="b192" name="keyType" value="192" onclick="configKey(this)">
+					<label for="b192">192bit</label>
+				</div>
+				<div>
+					<input type="radio" id="b256" name="keyType" value="256" onclick="configKey(this)">
+					<label for="b256">256bit</label>
+				</div>
+			</div>
+			<div class="d-flex justify-content-end">
+				<button onclick="cleanK()">Xóa</button>
+			</div>
 		</div>
 		<div>
 			<h3>Bản mã</h3>
 			<textarea id="inputEncrypt"></textarea>
+			<br>
+			<div class="d-flex justify-content-between">
+				<button onclick="decryptRun()">Giải mã</button>
+				<button onclick="cleanE()">Xóa</button>
+			</div>
 		</div>
 		<div class="d-flex flex-column gap-1">
 			<div class="d-flex ">
-				<button onclick="encryptRun()">Mã hóa</button>
-				<button onclick="decrypt()">Giải mã</button>
 			</div>
-			<div class="d-flex ">
-				<button onclick="clean()">Xóa</button>
+			<div class="d-flex justify-content-between">
+				<button onclick="cleanAll()">Xóa tất cả</button>
+				<button onclick="cleanO()">Xóa Output</button>
 			</div>
 		</div>
 	</div>
@@ -113,40 +142,41 @@
 			[1, 2, 3, 1],
 			[1, 1, 2, 3],
 			[3, 1, 1, 2]
-		]
-		const Rcon = [ "01", "02", "04", "08", "10", "20", "40", "80", "1B", "36" ]
+		];
+		const Rcon = [ "01", "02", "04", "08", "10", "20", "40", "80", "1B", "36" ];
+
+		const InvSBox = [
+			[ "52", "09", "6A", "D5", "30", "36", "A5", "38", "BF", "40", "A3", "9E", "81", "F3", "D7", "FB" ],
+			[ "7C", "E3", "39", "82", "9B", "2F", "FF", "87", "34", "8E", "43", "44", "C4", "DE", "E9", "CB" ],
+			[ "54", "7B", "94", "32", "A6", "C2", "23", "3D", "EE", "4C", "95", "0B", "42", "FA", "C3", "4E" ],
+			[ "08", "2E", "A1", "66", "28", "D9", "24", "B2", "76", "5B", "A2", "49", "6D", "8B", "D1", "25" ],
+			[ "72", "F8", "F6", "64", "86", "68", "98", "16", "D4", "A4", "5C", "CC", "5D", "65", "B6", "92" ],
+			[ "6C", "70", "48", "50", "FD", "ED", "B9", "DA", "5E", "15", "46", "57", "A7", "8D", "9D", "84" ],
+			[ "90", "D8", "AB", "00", "8C", "BC", "D3", "0A", "F7", "E4", "58", "05", "B8", "B3", "45", "06" ],
+			[ "D0", "2C", "1E", "8F", "CA", "3F", "0F", "02", "C1", "AF", "BD", "03", "01", "13", "8A", "6B" ],
+			[ "3A", "91", "11", "41", "4F", "67", "DC", "EA", "97", "F2", "CF", "CE", "F0", "B4", "E6", "73" ],
+			[ "96", "AC", "74", "22", "E7", "AD", "35", "85", "E2", "F9", "37", "E8", "1C", "75", "DF", "6E" ],
+			[ "47", "F1", "1A", "71", "1D", "29", "C5", "89", "6F", "B7", "62", "0E", "AA", "18", "BE", "1B" ],
+			[ "FC", "56", "3E", "4B", "C6", "D2", "79", "20", "9A", "DB", "C0", "FE", "78", "CD", "5A", "F4" ],
+			[ "1F", "DD", "A8", "33", "88", "07", "C7", "31", "B1", "12", "10", "59", "27", "80", "EC", "5F" ],
+			[ "60", "51", "7F", "A9", "19", "B5", "4A", "0D", "2D", "E5", "7A", "9F", "93", "C9", "9C", "EF" ],
+			[ "A0", "E0", "3B", "4D", "AE", "2A", "F5", "B0", "C8", "EB", "BB", "3C", "83", "53", "99", "61" ],
+			[ "17", "2B", "04", "7E", "BA", "77", "D6", "26", "E1", "69", "14", "63", "55", "21", "0C", "7D" ]
+		];
+		const InvMixMatrix = [
+			["e", "b", "d", "9"],
+			["9", "e", "b", "d"],
+			["d", "9", "e", "b"],
+			["b", "d", "9", "e"]
+		];
 	</script>
 	<script type="text/javascript">
-		/*let plainText = [
-		  	["32", "88", "31", "E0"],
-			["43", "5A", "31", "37"],
-			["F6", "30", "98", "07"],
-			["A8", "8D", "A2", "34"]
-		];
-		let keyText = [
-			["2B", "28", "AB", "09"],
-			["7E", "AE", "F7", "CF"],
-			["15", "D2", "15", "4F"],
-			["16", "A6", "88", "3C"]
-		];*/
-
-		/*let previousKey = keyText;
-		let currentKey = [ [], [], [], [] ];
-
-		let addRK = AddRoundKey(plainText, keyText);
-		let subB = SubBytes(addRK);
-		let shiftR = ShiftRows(subB);
-		let mixC = MixColumns(shiftR);
-		let keyE = KeyExpansion(previousKey);
-		console.log(mixC)
-		console.log(keyE)*/
-
 		function textToHex(text) {
 			let arr = text.split('');
 			let hex = [];
 
 			for (let i = 0; i < text.length; i++) {
-				hex.push(arr[i].charCodeAt(0).toString(16).toUpperCase());
+				hex.push(arr[i].charCodeAt(0).toString(16).toUpperCase().padStart(2, "0"));
 			}
 			return hex;
 		}
@@ -159,6 +189,22 @@
 		function hexToDecimal(hex) {
 			return parseInt(hexToBinary(hex), 2);
 		}
+		function hexToText(hex) {
+			return String.fromCharCode(parseInt(hex, 16));
+		}
+		/*function hexToText(hexString) {
+			// Chuyển đổi chuỗi hex thành một mảng các byte
+			const bytes = hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16));
+
+			// Tạo một Uint8Array từ mảng bytes
+			const uint8Array = new Uint8Array(bytes);
+
+			// Giải mã Base64
+			const base64String = String.fromCharCode.apply(null, uint8Array);
+			const decodedString = atob(base64String);
+
+			return decodedString;
+		}*/
 
 		function xorHex(hex1, hex2) {
 			const binary1 = hexToBinary(hex1);
@@ -174,23 +220,23 @@
 
 		function AddRoundKey(hex1, hex2) {
 			let temp = [];
-			for (var i = 0; i < hex1.length; i++) {
+			for (var i = 0; i < 4; i++) {
 				temp[i] = [];
-				for (var j = 0; j < hex1[i].length; j++) {
+				for (var j = 0; j < 4; j++) {
 					temp[i][j] = xorHex(hex1[i][j], hex2[i][j]);
 				}
 			}
 			return temp;
 		}
 
-		function SubBytes(hex) {
+		function SubBytes(hex, box) {
 			let temp = [];
-			for (var i = 0; i < hex.length; i++) {
+			for (var i = 0; i < 4; i++) {
 				temp[i] = [];
-				for (var j = 0; j < hex[i].length; j++) {
+				for (var j = 0; j < 4; j++) {
 					let row = hexToDecimal(hex[i][j].slice(0, 1));
 					let col = hexToDecimal(hex[i][j].slice(1));
-					temp[i][j] = SBox[row][col];
+					temp[i][j] = box[row][col];
 				}
 			}
 			return temp;
@@ -199,13 +245,13 @@
 		function ShiftRows(hex) {
 			let temp = [];
 			let lvl = 0;
-			for (var i = 0; i < hex.length; i++) {
+			for (var i = 0; i < 4; i++) {
 				temp[i] = [];
-				for (var j = 0 + lvl; j < hex[i].length; j++) {
+				for (var j = 0 + lvl; j < 4; j++) {
 					temp[i][j - lvl] = hex[i][j];
 				}
 				for (var j = 0; j < lvl; j++) {
-					temp[i][j + hex[i].length - lvl] = hex[i][j];
+					temp[i][j + 4 - lvl] = hex[i][j];
 				}
 				lvl++;
 			}
@@ -295,37 +341,81 @@
 
 			return temp;
 		}
+
+		function InvShiftRows(hex) {
+			let temp = [];
+			let lvl = 0;
+			for (var i = 0; i < 4; i++) {
+				temp[i] = [];
+				for (var j = 0 + lvl; j < 4; j++) {
+					temp[i][j] = hex[i][j - lvl];
+				}
+				for (var j = 0; j < lvl; j++) {
+					temp[i][j] = hex[i][j + 4 - lvl];
+				}
+				lvl++;
+			}
+			return temp;
+		}
+
+		function InvMixColumns(hex) {
+			let temp = [[], [], [], []];
+			for (var col = 0; col < 4; col++) {
+				for (var i = 0; i < 4; i++) {
+					let xorSum = "00";
+					for (var j = 0; j < 4; j++) {
+						let result = "";
+						switch (InvMixMatrix[i][j]) {
+							case "e":
+								cal1 = Shift02(Shift02(Shift02(hex[j][col])));
+								cal2 = Shift02(Shift02(hex[j][col]));
+								cal3 = Shift02(hex[j][col]);
+								result = xorHex(xorHex(cal1, cal2), cal3);
+								break;
+							case "b":
+								cal1 = Shift02(Shift02(Shift02(hex[j][col])));
+								cal2 = Shift02(hex[j][col]);
+								cal3 = hex[j][col];
+								result = xorHex(xorHex(cal1, cal2), cal3);
+								break;
+							case "d":
+								cal1 = Shift02(Shift02(Shift02(hex[j][col])));
+								cal2 = Shift02(Shift02(hex[j][col]));
+								cal3 = hex[j][col];
+								result = xorHex(xorHex(cal1, cal2), cal3);
+								break;
+							case "9":
+								cal1 = Shift02(Shift02(Shift02(hex[j][col])));
+								cal2 = hex[j][col];
+								result = xorHex(cal1, cal2);
+								break;
+						}
+						xorSum = xorHex(xorSum, result);
+					}
+					temp[i][col] = xorSum;
+				}
+			}
+			return temp;
+		}
 	</script>
 	<script type="text/javascript">
+		let colLength = 4;
+		let round = 10;
+
 		const inputDecrypt = document.querySelector('#inputDecrypt');
 		const inputKey = document.querySelector('#inputKey');
 		const inputEncrypt = document.querySelector('#inputEncrypt');
 		const output = document.querySelector('#output');
-		let plainText = [];
 
 		function encryptRun() {
 			const input = inputDecrypt.value;
 			const keyValue = inputKey.value;
-			let matrix = [], key = [], tempKey = "";
-			plainText = [];
+			let matrix = [], key = [], roundKey = [], tempKey = "", plainText = [], finalTxt = "";
 
 			output.innerHTML = null;
-			output.innerHTML += "<h3>Mã hóa</h3>";
-			output.innerHTML += `<p>Bản rõ: <b>${input}</b></p>`;
-			output.innerHTML += `<p>Kích thước bản rõ: ${input.length}</p>`;
+			output.innerHTML += "<h3>Mã hóa</h3><hr>";
 
-			cutPlainText(input);
-			if(input.length > 16) {
-				output.innerHTML += `<br><p>Kích thước bản rõ lớn hơn 16, cắt làm ${Math.ceil(input.length / 16)} đoạn để mã hóa</p>`;
-				plainText.forEach((e, i) => {
-					output.innerHTML += `<p>Đoạn ${i + 1}: <b>${e}</b></p>`;
-				});
-			} else if(input.length < 16) {
-				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn 16, chèn thêm *</p>`;
-				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${plainText[0]}</b></p>`;
-			}
-
-			output.innerHTML += `<br><p>Khóa: <b>${keyValue}</b></p>`;
+			output.innerHTML += `<p>Khóa: <b>${keyValue}</b></p>`;
 			output.innerHTML += `<p>Kích thước khóa: ${keyValue.length}</p>`;
 
 			tempKey = checkKey(keyValue);
@@ -337,22 +427,45 @@
 				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${tempKey}</b></p>`;
 			}
 			output.innerHTML += `<p>Chuyển khóa thành ma trận sau:</p>`;
-			key = createMatrix(tempKey);
+			key = strToMatrix(tempKey);
 			output.innerHTML += genTable(key);
 
 			output.innerHTML += `<p>Chuyển ma trận qua mã Hex:</p>`;
-			key = createMatrix(textToHex(tempKey));
+			key = strToMatrix(textToHex(tempKey));
 			output.innerHTML += genTable(key);
+
+			output.innerHTML += `<p>Từ ma trận Hex trên, ta tính ra được các RoundKey:</p>`;
+			roundKey[0] = matrixToStr(key);
+			for (var i = 1; i <= 10; i++) {
+				roundKey[i] = matrixToStr(KeyExpansion(hexToMatrix(roundKey[i - 1]), i - 1));
+			}
+			roundKey.forEach((e, i) => {
+				output.innerHTML += `<p>RoundKey ${i.toString().padStart(2, '0')}: ${e}</p>`;
+			})
+
+			output.innerHTML += `<hr><p>Bản rõ: <b>${input}</b></p>`;
+			output.innerHTML += `<p>Kích thước bản rõ: ${input.length}</p>`;
+
+			cutPlainText(input, plainText);
+			if(input.length > 16) {
+				output.innerHTML += `<br><p>Kích thước bản rõ lớn hơn 16, cắt làm ${Math.ceil(input.length / 16)} đoạn để mã hóa</p>`;
+				plainText.forEach((e, i) => {
+					output.innerHTML += `<p>Đoạn ${i + 1}: <b>${e}</b></p>`;
+				});
+			} else if(input.length < 16) {
+				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn 16, chèn thêm *</p>`;
+				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${plainText[0]}</b></p>`;
+			}
 
 			plainText.forEach(e => {
 				output.innerHTML += `<hr><h3>Mã hóa đoạn: ${e}</h3>`;
 
 				output.innerHTML += `<p>Chuyển <b>${e}</b> thành ma trận sau:</p>`;
-				matrix = createMatrix(e);
+				matrix = strToMatrix(e);
 				output.innerHTML += genTable(matrix);
 
 				output.innerHTML += `<p>Chuyển ma trận qua mã Hex:</p>`;
-				matrix = createMatrix(textToHex(e));
+				matrix = strToMatrix(textToHex(e));
 				output.innerHTML += genTable(matrix);
 
 				let addRK, subB, shiftR, mixC;
@@ -360,22 +473,15 @@
 					output.innerHTML += `<br><p>> Vòng lặp ${i}</p>`;
 
 					output.innerHTML += `<p>- RoundKey ${i}</p>`;
-					if(i != 0) {
-						key = KeyExpansion(key, i - 1);
-					}
-					output.innerHTML += genTable(key);
+					output.innerHTML += genTable(hexToMatrix(roundKey[i]));
 
 					output.innerHTML += `<p>- AddRoundKey ${i}</p>`;
-					if(i == 0) {
-						addRK = AddRoundKey(matrix, key);
-					} else {
-						addRK = AddRoundKey(mixC, key);
-					}
+					addRK = AddRoundKey(matrix, hexToMatrix(roundKey[i]));
 					output.innerHTML += genTable(addRK);
 						
 					if(i < 10) {
 						output.innerHTML += `<p>- SubBytes ${i}</p>`;
-						subB = SubBytes(addRK);
+						subB = SubBytes(addRK, SBox);
 						output.innerHTML += genTable(subB);
 						
 						output.innerHTML += `<p>- ShiftRows ${i}</p>`;
@@ -390,22 +496,157 @@
 					} else {
 						mixC = shiftR;
 					}
+					matrix = mixC;
 				}
+				output.innerHTML += `<p>Chuyển ma trận Hex về chuỗi:</p>`;
+				output.innerHTML += `<p>${matrixToStr(addRK)}</p>`;
+
+				output.innerHTML += `<p>Chuyển Hex về văn bản:</p>`;
+				let text = mHexToText(addRK);
+				output.innerHTML += `<p>${text}</p>`;
+
+				finalTxt += text;
 			});
+
+			output.innerHTML += `<hr><p>Bản mã cuối cùng: ${finalTxt}</p>`;
+			inputEncrypt.value = finalTxt;
 		}
 
-		function decrypt() {
+		function decryptRun() {
+			const input = inputEncrypt.value;
+			const keyValue = inputKey.value;
+			let matrix = [], key = [], roundKey = [], tempKey = "", plainText = [], finalTxt = "";
 
+			output.innerHTML = null;
+			output.innerHTML += "<h3>Giải mã</h3><hr>";
+
+			output.innerHTML += `<p>Khóa: <b>${keyValue}</b></p>`;
+			output.innerHTML += `<p>Kích thước khóa: ${keyValue.length}</p>`;
+
+			tempKey = checkKey(keyValue);
+			if(keyValue.length > 16) {
+				output.innerHTML += `<br><p>Kích thước khóa lớn hơn 16, cắt lấy 16 ký tự để mã hóa</p>`;
+				output.innerHTML += `<p>Sau khi cắt: <b>${tempKey}</b></p>`;
+			} else if(keyValue.length < 16) {
+				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn 16, chèn thêm *</p>`;
+				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${tempKey}</b></p>`;
+			}
+			output.innerHTML += `<p>Chuyển khóa thành ma trận sau:</p>`;
+			key = strToMatrix(tempKey);
+			output.innerHTML += genTable(key);
+
+			output.innerHTML += `<p>Chuyển ma trận qua mã Hex:</p>`;
+			key = strToMatrix(textToHex(tempKey));
+			output.innerHTML += genTable(key);
+
+			output.innerHTML += `<p>Từ ma trận Hex trên, ta tính ra được các RoundKey:</p>`;
+			roundKey[0] = matrixToStr(key);
+			for (var i = 1; i <= 10; i++) {
+				roundKey[i] = matrixToStr(KeyExpansion(hexToMatrix(roundKey[i - 1]), i - 1));
+			}
+			roundKey.forEach((e, i) => {
+				output.innerHTML += `<p>RoundKey ${i.toString().padStart(2, '0')}: ${e}</p>`;
+			})
+
+			output.innerHTML += `<hr><p>Bản mã: <b>${input}</b></p>`;
+			output.innerHTML += `<p>Kích thước bản mã: ${input.length}</p>`;
+
+			cutPlainText(input, plainText);
+			if(input.length > 16) {
+				output.innerHTML += `<br><p>Kích thước bản mã lớn hơn 16, cắt làm ${Math.ceil(input.length / 16)} đoạn để mã hóa</p>`;
+				plainText.forEach((e, i) => {
+					output.innerHTML += `<p>Đoạn ${i + 1}: <b>${e}</b></p>`;
+				});
+			} else if(input.length < 16) {
+				output.innerHTML += `<br><p>Kích thước bản mã nhỏ hơn 16, chèn thêm *</p>`;
+				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${plainText[0]}</b></p>`;
+			}
+
+			plainText.forEach(e => {
+				output.innerHTML += `<hr><h3>Giải mã đoạn: ${e}</h3>`;
+
+				output.innerHTML += `<p>Chuyển <b>${e}</b> thành ma trận sau:</p>`;
+				matrix = strToMatrix(e);
+				output.innerHTML += genTable(matrix);
+
+				output.innerHTML += `<p>Chuyển ma trận qua mã Hex:</p>`;
+				matrix = strToMatrix(textToHex(e));
+				output.innerHTML += genTable(matrix);
+
+				let addRK, subB, shiftR, mixC;
+				for (var i = 0; i <= 10; i++) {
+					output.innerHTML += `<br><p>> Vòng lặp ${i}</p>`;
+
+					output.innerHTML += `<p>- RoundKey ${10 - i}</p>`;
+					output.innerHTML += genTable(hexToMatrix(roundKey[10 - i]));
+
+					output.innerHTML += `<p>- AddRoundKey ${10 - i}</p>`;
+					addRK = AddRoundKey(matrix, hexToMatrix(roundKey[10 - i]));
+					output.innerHTML += genTable(addRK);
+
+					if(i > 0 && i < 10) {
+						output.innerHTML += `<p>- InvMixColumns ${10 - i}</p>`;
+						mixC = InvMixColumns(addRK);
+						output.innerHTML += genTable(mixC);
+					} else {
+						mixC = addRK;
+					}
+						
+					if(i < 10) {
+						output.innerHTML += `<p>- InvShiftRows ${10 - i}</p>`;
+						shiftR = InvShiftRows(mixC);
+						output.innerHTML += genTable(shiftR);
+
+						output.innerHTML += `<p>- InvSubBytes ${10 - i}</p>`;
+						subB = SubBytes(shiftR, InvSBox);
+						output.innerHTML += genTable(subB);
+					} else {
+						subB = mixC;
+					}
+
+					matrix = subB;
+				}
+				output.innerHTML += `<p>Chuyển ma trận Hex về chuỗi:</p>`;
+				output.innerHTML += `<p>${matrixToStr(addRK)}</p>`;
+
+				output.innerHTML += `<p>Chuyển Hex về văn bản:</p>`;
+				let text = mHexToText(addRK);
+				output.innerHTML += `<p>${text}</p>`;
+
+				/*if(text[text.length - 1] == "*") {
+					let count = 0;
+					for (var i = text.length; i > 0; i--) {
+						
+					}
+				}*/
+
+				finalTxt += text;
+			});
+
+			output.innerHTML += `<hr><p>Bản rõ cuối cùng: ${finalTxt}</p>`;
+			inputDecrypt.value = finalTxt;
 		}
 
-		function clean() {
-			inputEncrypt.value = null;
-			inputKey.value = null;
+		function cleanAll() {
+			cleanD();
+			cleanK();
+			cleanE();
+			cleanO();
+		}
+		function cleanD() {
 			inputDecrypt.value = null;
+		}
+		function cleanK() {
+			inputKey.value = null;
+		}
+		function cleanE() {
+			inputEncrypt.value = null;
+		}
+		function cleanO() {
 			output.innerHTML = null;
 		}
 
-		function cutPlainText(str) {
+		function cutPlainText(str, plainText) {
 			for (var i = 0; i < str.length; i += 16) {
 				let group = str.substring(i, i + 16);
 				plainText.push(group.padEnd(16, '*'));
@@ -423,7 +664,7 @@
 			}
 		}
 
-		function createMatrix(str) {
+		function strToMatrix(str) {
 			let temp = [ [], [], [], [] ];
 			let char = 0;
 
@@ -445,7 +686,60 @@
 				}
 				temp += '</tr>';
 			}
-			return `${temp}</table>`;
+			return `${temp}</table><br>`;
+		}
+
+		function matrixToStr(matrix) {
+			let temp = [];
+
+			for (var i = 0; i < 4; i++) {
+				for (var j = 0; j < 4; j++) {
+					temp += ` ${matrix[j][i]}`;
+				}
+			}
+			return temp.slice(1);
+		}
+
+		function hexToMatrix(hex) {
+			let temp = [ [], [], [], [] ];
+			let strHex = hex.split(' ');
+			let char = 0;
+
+			for (var i = 0; i < 4; i++) {
+				for (var j = 0; j < 4; j++) {
+					temp[j][i] = strHex[char];
+					char++;
+				}
+			}
+			return temp;
+		}
+
+		function mHexToText(mHex) {
+			let temp = "";
+
+			for (var i = 0; i < 4; i++) {
+				for (var j = 0; j < 4; j++) {
+					temp += hexToText(mHex[j][i]);
+				}
+			}
+			return temp;
+		}
+
+		function configKey(key) {
+			switch (key.value) {
+				case "128":
+					colLength = 4;
+					round = 10;
+					break;
+				case "192":
+					colLength = 6;
+					round = 12;
+					break;
+				case "256":
+					colLength = 8;
+					round = 14;
+					break;
+			}
 		}
 	</script>
 </body>
