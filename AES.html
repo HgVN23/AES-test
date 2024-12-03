@@ -143,7 +143,7 @@
 			[1, 1, 2, 3],
 			[3, 1, 1, 2]
 		];
-		const Rcon = [ "01", "02", "04", "08", "10", "20", "40", "80", "1B", "36" ];
+		const Rcon = [ "01", "02", "04", "08", "10", "20", "40", "80", "1B", "36", "6A", "B8", "AB", "47" ];
 
 		const InvSBox = [
 			[ "52", "09", "6A", "D5", "30", "36", "A5", "38", "BF", "40", "A3", "9E", "81", "F3", "D7", "FB" ],
@@ -294,14 +294,14 @@
 			}
 		}
 
-		function KeyExpansion(key, round) {
+		function KeyExpansion(key, roundLoop) {
 			let temp = [ [], [], [], [] ];
 			for (var i = 0; i < 4; i++) {
 				let w1 = getW(key, i);
 				let w2;
 
 				if(i == 0) {
-					w2 = trans(getW(key, 3), round);
+					w2 = trans(getW(key, 3), roundLoop);
 				} else {
 					w2 = getW(temp, i - 1);
 				}
@@ -316,8 +316,8 @@
 			let temp = [hex[0][col], hex[1][col], hex[2][col], hex[3][col]];
 			return temp;
 		}
-		function trans(arr, round) {
-			return AddRcon(SubWord(RotWord(arr)), round);
+		function trans(arr, roundLoop) {
+			return AddRcon(SubWord(RotWord(arr)), roundLoop);
 		}
 		function RotWord(arr) {
 			let temp = [arr[1], arr[2], arr[3], arr[0]];
@@ -332,9 +332,9 @@
 			}
 			return temp;
 		}
-		function AddRcon(arr, round) {
+		function AddRcon(arr, roundLoop) {
 			let temp = [];
-			temp.push(xorHex(arr[0], Rcon[round]));
+			temp.push(xorHex(arr[0], Rcon[roundLoop]));
 			temp.push(xorHex(arr[1], "00"));
 			temp.push(xorHex(arr[2], "00"));
 			temp.push(xorHex(arr[3], "00"));
@@ -400,7 +400,8 @@
 	</script>
 	<script type="text/javascript">
 		let colLength = 4;
-		let round = 10;
+		let roundLoop = 10;
+		let keyLength = 16;
 
 		const inputDecrypt = document.querySelector('#inputDecrypt');
 		const inputKey = document.querySelector('#inputKey');
@@ -419,12 +420,12 @@
 			output.innerHTML += `<p>Kích thước khóa: ${keyValue.length}</p>`;
 
 			tempKey = checkKey(keyValue);
-			if(keyValue.length > 16) {
-				output.innerHTML += `<br><p>Kích thước khóa lớn hơn 16, cắt lấy 16 ký tự để mã hóa</p>`;
+			if(keyValue.length > keyLength) {
+				output.innerHTML += `<br><p>Kích thước khóa lớn hơn ${keyLength}, cắt lấy ${keyLength} ký tự để mã hóa</p>`;
 				output.innerHTML += `<p>Sau khi cắt: <b>${tempKey}</b></p>`;
-			} else if(keyValue.length < 16) {
-				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn 16, chèn thêm *</p>`;
-				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${tempKey}</b></p>`;
+			} else if(keyValue.length < keyLength) {
+				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn ${keyLength}, chèn thêm \\0</p>`;
+				output.innerHTML += `<p>Sau khi chèn thêm \\0: <b>${tempKey}</b></p>`;
 			}
 			output.innerHTML += `<p>Chuyển khóa thành ma trận sau:</p>`;
 			key = strToMatrix(tempKey);
@@ -436,7 +437,7 @@
 
 			output.innerHTML += `<p>Từ ma trận Hex trên, ta tính ra được các RoundKey:</p>`;
 			roundKey[0] = matrixToStr(key);
-			for (var i = 1; i <= 10; i++) {
+			for (var i = 1; i <= roundLoop; i++) {
 				roundKey[i] = matrixToStr(KeyExpansion(hexToMatrix(roundKey[i - 1]), i - 1));
 			}
 			roundKey.forEach((e, i) => {
@@ -447,14 +448,14 @@
 			output.innerHTML += `<p>Kích thước bản rõ: ${input.length}</p>`;
 
 			cutPlainText(input, plainText);
-			if(input.length > 16) {
-				output.innerHTML += `<br><p>Kích thước bản rõ lớn hơn 16, cắt làm ${Math.ceil(input.length / 16)} đoạn để mã hóa</p>`;
+			if(input.length > keyLength) {
+				output.innerHTML += `<br><p>Kích thước bản rõ lớn hơn ${keyLength}, cắt làm ${Math.ceil(input.length / keyLength)} đoạn để mã hóa</p>`;
 				plainText.forEach((e, i) => {
 					output.innerHTML += `<p>Đoạn ${i + 1}: <b>${e}</b></p>`;
 				});
-			} else if(input.length < 16) {
-				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn 16, chèn thêm *</p>`;
-				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${plainText[0]}</b></p>`;
+			} else if(input.length < keyLength) {
+				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn ${keyLength}, chèn thêm \\0</p>`;
+				output.innerHTML += `<p>Sau khi chèn thêm \\0: <b>${plainText[0]}</b></p>`;
 			}
 
 			plainText.forEach(e => {
@@ -469,7 +470,7 @@
 				output.innerHTML += genTable(matrix);
 
 				let addRK, subB, shiftR, mixC;
-				for (var i = 0; i <= 10; i++) {
+				for (var i = 0; i <= roundLoop; i++) {
 					output.innerHTML += `<br><p>> Vòng lặp ${i}</p>`;
 
 					output.innerHTML += `<p>- RoundKey ${i}</p>`;
@@ -479,7 +480,7 @@
 					addRK = AddRoundKey(matrix, hexToMatrix(roundKey[i]));
 					output.innerHTML += genTable(addRK);
 						
-					if(i < 10) {
+					if(i < roundLoop) {
 						output.innerHTML += `<p>- SubBytes ${i}</p>`;
 						subB = SubBytes(addRK, SBox);
 						output.innerHTML += genTable(subB);
@@ -508,12 +509,15 @@
 				finalTxt += text;
 			});
 
+			output.innerHTML += `<hr><p>Bản mã hiện tại: ${finalTxt}</p>`;
+
+			finalTxt = btoa(finalTxt);
 			output.innerHTML += `<hr><p>Bản mã cuối cùng: ${finalTxt}</p>`;
 			inputEncrypt.value = finalTxt;
 		}
 
 		function decryptRun() {
-			const input = inputEncrypt.value;
+			let input = inputEncrypt.value;
 			const keyValue = inputKey.value;
 			let matrix = [], key = [], roundKey = [], tempKey = "", plainText = [], finalTxt = "";
 
@@ -524,12 +528,12 @@
 			output.innerHTML += `<p>Kích thước khóa: ${keyValue.length}</p>`;
 
 			tempKey = checkKey(keyValue);
-			if(keyValue.length > 16) {
-				output.innerHTML += `<br><p>Kích thước khóa lớn hơn 16, cắt lấy 16 ký tự để mã hóa</p>`;
+			if(keyValue.length > keyLength) {
+				output.innerHTML += `<br><p>Kích thước khóa lớn hơn ${keyLength}, cắt lấy ${keyLength} ký tự để mã hóa</p>`;
 				output.innerHTML += `<p>Sau khi cắt: <b>${tempKey}</b></p>`;
-			} else if(keyValue.length < 16) {
-				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn 16, chèn thêm *</p>`;
-				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${tempKey}</b></p>`;
+			} else if(keyValue.length < keyLength) {
+				output.innerHTML += `<br><p>Kích thước bản rõ nhỏ hơn ${keyLength}, chèn thêm \\0</p>`;
+				output.innerHTML += `<p>Sau khi chèn thêm \\0: <b>${tempKey}</b></p>`;
 			}
 			output.innerHTML += `<p>Chuyển khóa thành ma trận sau:</p>`;
 			key = strToMatrix(tempKey);
@@ -541,7 +545,7 @@
 
 			output.innerHTML += `<p>Từ ma trận Hex trên, ta tính ra được các RoundKey:</p>`;
 			roundKey[0] = matrixToStr(key);
-			for (var i = 1; i <= 10; i++) {
+			for (var i = 1; i <= roundLoop; i++) {
 				roundKey[i] = matrixToStr(KeyExpansion(hexToMatrix(roundKey[i - 1]), i - 1));
 			}
 			roundKey.forEach((e, i) => {
@@ -549,17 +553,19 @@
 			})
 
 			output.innerHTML += `<hr><p>Bản mã: <b>${input}</b></p>`;
+			input = atob(input);
+			output.innerHTML += `<p>Chuyển đổi: <b>${input}</b></p>`;
 			output.innerHTML += `<p>Kích thước bản mã: ${input.length}</p>`;
 
 			cutPlainText(input, plainText);
-			if(input.length > 16) {
-				output.innerHTML += `<br><p>Kích thước bản mã lớn hơn 16, cắt làm ${Math.ceil(input.length / 16)} đoạn để mã hóa</p>`;
+			if(input.length > keyLength) {
+				output.innerHTML += `<br><p>Kích thước bản mã lớn hơn ${keyLength}, cắt làm ${Math.ceil(input.length / keyLength)} đoạn để mã hóa</p>`;
 				plainText.forEach((e, i) => {
 					output.innerHTML += `<p>Đoạn ${i + 1}: <b>${e}</b></p>`;
 				});
-			} else if(input.length < 16) {
-				output.innerHTML += `<br><p>Kích thước bản mã nhỏ hơn 16, chèn thêm *</p>`;
-				output.innerHTML += `<p>Sau khi chèn thêm *: <b>${plainText[0]}</b></p>`;
+			} else if(input.length < keyLength) {
+				output.innerHTML += `<br><p>Kích thước bản mã nhỏ hơn ${keyLength}, chèn thêm \\0</p>`;
+				output.innerHTML += `<p>Sau khi chèn thêm \\0: <b>${plainText[0]}</b></p>`;
 			}
 
 			plainText.forEach(e => {
@@ -574,30 +580,30 @@
 				output.innerHTML += genTable(matrix);
 
 				let addRK, subB, shiftR, mixC;
-				for (var i = 0; i <= 10; i++) {
+				for (var i = 0; i <= roundLoop; i++) {
 					output.innerHTML += `<br><p>> Vòng lặp ${i}</p>`;
 
-					output.innerHTML += `<p>- RoundKey ${10 - i}</p>`;
-					output.innerHTML += genTable(hexToMatrix(roundKey[10 - i]));
+					output.innerHTML += `<p>- RoundKey ${roundLoop - i}</p>`;
+					output.innerHTML += genTable(hexToMatrix(roundKey[roundLoop - i]));
 
-					output.innerHTML += `<p>- AddRoundKey ${10 - i}</p>`;
-					addRK = AddRoundKey(matrix, hexToMatrix(roundKey[10 - i]));
+					output.innerHTML += `<p>- AddRoundKey ${roundLoop - i}</p>`;
+					addRK = AddRoundKey(matrix, hexToMatrix(roundKey[roundLoop - i]));
 					output.innerHTML += genTable(addRK);
 
-					if(i > 0 && i < 10) {
-						output.innerHTML += `<p>- InvMixColumns ${10 - i}</p>`;
+					if(i > 0 && i < roundLoop) {
+						output.innerHTML += `<p>- InvMixColumns ${roundLoop - i}</p>`;
 						mixC = InvMixColumns(addRK);
 						output.innerHTML += genTable(mixC);
 					} else {
 						mixC = addRK;
 					}
 						
-					if(i < 10) {
-						output.innerHTML += `<p>- InvShiftRows ${10 - i}</p>`;
+					if(i < roundLoop) {
+						output.innerHTML += `<p>- InvShiftRows ${roundLoop - i}</p>`;
 						shiftR = InvShiftRows(mixC);
 						output.innerHTML += genTable(shiftR);
 
-						output.innerHTML += `<p>- InvSubBytes ${10 - i}</p>`;
+						output.innerHTML += `<p>- InvSubBytes ${roundLoop - i}</p>`;
 						subB = SubBytes(shiftR, InvSBox);
 						output.innerHTML += genTable(subB);
 					} else {
@@ -613,18 +619,11 @@
 				let text = mHexToText(addRK);
 				output.innerHTML += `<p>${text}</p>`;
 
-				/*if(text[text.length - 1] == "*") {
-					let count = 0;
-					for (var i = text.length; i > 0; i--) {
-						
-					}
-				}*/
-
 				finalTxt += text;
 			});
 
 			output.innerHTML += `<hr><p>Bản rõ cuối cùng: ${finalTxt}</p>`;
-			inputDecrypt.value = finalTxt;
+			inputDecrypt.value = finalTxt.replaceAll("\0", "");
 		}
 
 		function cleanAll() {
@@ -647,18 +646,18 @@
 		}
 
 		function cutPlainText(str, plainText) {
-			for (var i = 0; i < str.length; i += 16) {
-				let group = str.substring(i, i + 16);
-				plainText.push(group.padEnd(16, '*'));
+			for (var i = 0; i < str.length; i += keyLength) {
+				let group = str.substring(i, i + keyLength);
+				plainText.push(group.padEnd(keyLength, '\0'));
 			}
 		}
 
 		function checkKey(key) {
-			if(key.length > 16) {
-				return key.substring(0, 16);
+			if(key.length > keyLength) {
+				return key.substring(0, keyLength);
 			}
-			else if(key.length < 16) {
-				return key.padEnd(16, '*');
+			else if(key.length < keyLength) {
+				return key.padEnd(keyLength, '\0');
 			} else {
 				return key;
 			}
@@ -729,15 +728,18 @@
 			switch (key.value) {
 				case "128":
 					colLength = 4;
-					round = 10;
+					roundLoop = 10;
+					keyLength = 16;
 					break;
 				case "192":
 					colLength = 6;
-					round = 12;
+					roundLoop = 12;
+					keyLength = 24;
 					break;
 				case "256":
 					colLength = 8;
-					round = 14;
+					roundLoop = 14;
+					keyLength = 32;
 					break;
 			}
 		}
